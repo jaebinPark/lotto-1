@@ -1,75 +1,76 @@
-name: Deploy to GitHub Pages
+name: Pages (static upload)
 
 on:
-push:
-branches: [ "main" ]
-workflow_dispatch:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 permissions:
-contents: read
-pages: write
-id-token: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-group: "pages"
-cancel-in-progress: true
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
-build:
-runs-on: ubuntu-latest
-steps:
-- name: Checkout
-uses: actions/checkout@v4
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-# package.json이 있을 때만 Node 세팅/설치 (없으면 자동 생략)
-- name: Setup Node (optional)
-uses: actions/setup-node@v4
-with:
-node-version: "20"
-if: ${{ hashFiles('package.json') != '' }}
+# package.json이 있을 때만 Node 단계 수행 (없으면 통째로 건너뜀)
+      - name: Setup Node (optional)
+        if: ${{ hashFiles('package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-- name: Install deps (optional)
-run: npm ci
-if: ${{ hashFiles('package.json') != '' }}
+      - name: Install deps (optional)
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm ci
 
-# 전체 회차 수집/ANTI 생성 스크립트가 있을 때만 실행 (없으면 생략)
-- name: Build draws (optional)
-run: node scripts/build-draws.mjs
-if: ${{ hashFiles('scripts/build-draws.mjs') != '' }}
+      - name: Build (optional)
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run build
 
-- name: Build anti (optional)
-run: node scripts/build-anti.mjs
-if: ${{ hashFiles('scripts/build-anti.mjs') != '' }}
+      - name: Prepare dist
+        shell: bash
+        run: |
+          set -e
+          rm -rf dist
+          mkdir -p dist
+          # 빌드 산출물이 build/로 나오면 그걸 사용
+          if [ -d "build" ]; then
+            cp -r build/* dist/
+          # 이미 dist/에 산출물이 있다면 그대로 사용
+          elif [ -d "dist" ] && [ -f "dist/index.html" ]; then
+            echo "use existing dist/"
+          else
+            # 루트의 정적 파일들을 업로드 대상으로 구성
+            for f in index.html 404.html styles.css manifest.webmanifest sw.js app.js app.bundle.js; do
+              [ -f "$f" ] && cp "$f" dist/ || true
+            done
+              [ -d icons ] && cp -r icons dist/ || true
+              [ -d data ] && cp -r data dist/ || true
+              [ -d js ] && cp -r js dist/ || true
+            fi
+            touch dist/.nojekyll
 
-# 정적 파일을 dist로 모아 업로드
-- name: Prepare dist
-shell: bash
-run: |
-set -e
-mkdir -p dist
-for p in index.html 404.html styles.css manifest.webmanifest sw.js; do
-[ -f "$p" ] && cp "$p" dist/ || true
-done
-[ -d icons ] && cp -r icons dist/
-[ -d data ] && cp -r data dist/
-[ -d js ] && cp -r js dist/
-touch dist/.nojekyll
-
-- name: Upload artifact
-uses: actions/upload-pages-artifact@v3
-with:
-path: dist
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
 
 deploy:
-needs: build
-runs-on: ubuntu-latest
-permissions:
-pages: write
-id-token: write
-environment:
-name: github-pages
-url: ${{ steps.deployment.outputs.page_url }}
-steps:
-- name: Deploy to GitHub Pages
-id: deployment
-uses: actions/deploy-pages@v4
+  needs: build
+  runs-on: ubuntu-latest
+  environment:
+    name: github-pages
+    url: ${{ steps.deployment.outputs.page_url }}
+  steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
