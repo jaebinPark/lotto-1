@@ -22,38 +22,39 @@ steps:
 - name: Checkout
 uses: actions/checkout@v4
 
-# Node 스크립트가 있을 때만 준비 (package.json이 존재하면 동작)
-- name: Setup Node (conditional)
-if: ${{ hashFiles('package.json') != '' }}
+# package.json이 있을 때만 Node 세팅/설치 (없으면 자동 생략)
+- name: Setup Node (optional)
 uses: actions/setup-node@v4
 with:
-node-version: '20'
-
-- name: Install deps (conditional)
+node-version: "20"
 if: ${{ hashFiles('package.json') != '' }}
+
+- name: Install deps (optional)
 run: npm ci
+if: ${{ hashFiles('package.json') != '' }}
 
-# (선택) 전체/갱신 크롤링 스크립트가 있을 때만 실행
-- name: Build draws (conditional)
-if: ${{ hashFiles('scripts/build-draws.mjs') != '' }}
+# 전체 회차 수집/ANTI 생성 스크립트가 있을 때만 실행 (없으면 생략)
+- name: Build draws (optional)
 run: node scripts/build-draws.mjs
+if: ${{ hashFiles('scripts/build-draws.mjs') != '' }}
 
-- name: Build ANTI (conditional)
-if: ${{ hashFiles('scripts/build-anti.mjs') != '' }}
+- name: Build anti (optional)
 run: node scripts/build-anti.mjs
+if: ${{ hashFiles('scripts/build-anti.mjs') != '' }}
 
-- name: Prepare dist (copy only publish files)
+# 정적 파일을 dist로 모아 업로드
+- name: Prepare dist
 shell: bash
 run: |
 set -e
 mkdir -p dist
 for p in index.html 404.html styles.css manifest.webmanifest sw.js; do
-[ -f "$p" ] && cp "$p" dist/
+[ -f "$p" ] && cp "$p" dist/ || true
 done
 [ -d icons ] && cp -r icons dist/
 [ -d data ] && cp -r data dist/
 [ -d js ] && cp -r js dist/
-# Jekyll 해제
+# Jekyll 끄기
 touch dist/.nojekyll
 
 - name: Upload artifact
@@ -64,6 +65,9 @@ path: dist
 deploy:
 needs: build
 runs-on: ubuntu-latest
+permissions:
+pages: write
+id-token: write
 environment:
 name: github-pages
 url: ${{ steps.deployment.outputs.page_url }}
