@@ -1,51 +1,73 @@
 
-name: Build & Deploy (Pages + Full Lotto History)
+name: Deploy to GitHub Pages
+
 on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
-  schedule:
-    - cron: "35 11 * * 6"
-    - cron: "45 11 * * 6"
-    - cron: "0 12 * * 6"
-    - cron: "15 12 * * 6"
-    - cron: "30 12 * * 6"
-    - cron: "45 12 * * 6"
-    - cron: "0 13 * * 6"
-    - cron: "15 13 * * 6"
-    - cron: "30 13 * * 6"
-    - cron: "45 13 * * 6"
-    - cron: "0 14 * * 6"
-    - cron: "15 14 * * 6"
-    - cron: "30 14 * * 6"
-permissions: { contents: read, pages: write, id-token: write }
-concurrency: { group: "pages", cancel-in-progress: true }
+push:
+branches: [ "main" ]
+workflow_dispatch:
+
+permissions:
+contents: read
+pages: write
+id-token: write
+
+concurrency:
+group: "pages"
+cancel-in-progress: true
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - name: Install deps for scraping
-        run: |
-          npm init -y
-          npm install node-fetch@3 cheerio@1
-      - name: Fetch full history (1 ~ latest)
-        run: node scripts/build-draws.mjs
-      - name: Build ANTI (from history)
-        run: node scripts/build-anti.mjs
-      - name: Inject cache-buster
-        run: |
-          SHORT=${GITHUB_SHA::7}
-          sed -i "s/{{BUILD}}/$SHORT/g" index.html sw.js styles.css js/main.js js/recommend.js js/store.js || true
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with: { path: . }
-  deploy:
-    needs: build
-    environment: { name: github-pages }
-    runs-on: ubuntu-latest
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+build:
+runs-on: ubuntu-latest
+steps:
+- name: Checkout
+uses: actions/checkout@v4
+
+# Node 스크립트가 있을 때만 준비 (package.json이 존재하면 동작)
+- name: Setup Node (conditional)
+if: ${{ hashFiles('package.json') != '' }}
+uses: actions/setup-node@v4
+with:
+node-version: '20'
+
+- name: Install deps (conditional)
+if: ${{ hashFiles('package.json') != '' }}
+run: npm ci
+
+# (선택) 전체/갱신 크롤링 스크립트가 있을 때만 실행
+- name: Build draws (conditional)
+if: ${{ hashFiles('scripts/build-draws.mjs') != '' }}
+run: node scripts/build-draws.mjs
+
+- name: Build ANTI (conditional)
+if: ${{ hashFiles('scripts/build-anti.mjs') != '' }}
+run: node scripts/build-anti.mjs
+
+- name: Prepare dist (copy only publish files)
+shell: bash
+run: |
+set -e
+mkdir -p dist
+for p in index.html 404.html styles.css manifest.webmanifest sw.js; do
+[ -f "$p" ] && cp "$p" dist/
+done
+[ -d icons ] && cp -r icons dist/
+[ -d data ] && cp -r data dist/
+[ -d js ] && cp -r js dist/
+# Jekyll 해제
+touch dist/.nojekyll
+
+- name: Upload artifact
+uses: actions/upload-pages-artifact@v3
+with:
+path: dist
+
+deploy:
+needs: build
+runs-on: ubuntu-latest
+environment:
+name: github-pages
+url: ${{ steps.deployment.outputs.page_url }}
+steps:
+- name: Deploy to GitHub Pages
+id: deployment
+uses: actions/deploy-pages@v4
