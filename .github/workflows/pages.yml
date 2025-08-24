@@ -1,4 +1,3 @@
-
 name: Deploy to GitHub Pages
 
 on:
@@ -54,7 +53,6 @@ done
 [ -d icons ] && cp -r icons dist/
 [ -d data ] && cp -r data dist/
 [ -d js ] && cp -r js dist/
-# Jekyll 끄기
 touch dist/.nojekyll
 
 - name: Upload artifact
