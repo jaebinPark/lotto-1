@@ -22,3 +22,4 @@ self.addEventListener('fetch', e=>{
     e.respondWith(caches.match(e.request).then(r=> r || fetch(e.request).then(res=>{const copy=res.clone();caches.open('core-'+CACHE_VERSION).then(c=>c.put(e.request,copy)).catch(()=>{});return res;}).catch(()=>caches.match('./index.html'))));
   }else e.respondWith(fetch(e.request));
 });
+// cache-bust 2025-08-25T19:25:06
