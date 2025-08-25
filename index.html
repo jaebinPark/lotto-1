@@ -1,17 +1,15 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ko">
 <head>
-  <link rel="icon" href="./icons/app-icon-180.png" type="image/png">
-  <link rel="apple-touch-icon" href="./icons/app-icon-180.png">
-  <meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="./icons/app-icon-180.png" type="image/png">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/app-icon-180.png" />
   <link rel="stylesheet" href="./styles.css?v={{BUILD}}" />
   <title>로또 KR Lab Pro</title>
-  <link rel="icon" href="./icons/apple-touch-icon.png" type="image/png">
 </head>
 <body>
   <div id="app"></div>
@@ -24,11 +22,21 @@
     }
   </script>
   <script type="module" src="./js/main.js?v={{BUILD}}"></script>
-  <script src="./js/patch.chip.util.js?v=3"></script>
-  <script src="./js/patch.saved.highlight.js?v=3"></script>
-  <script src="./js/patch.exclude.enhancer.js?v=3"></script>
-  <script src="./js/patch.anti.v3.js?v=3"></script>
-  <script src="./js/patch.results.range.badge.js?v=3"></script>
+<script type="module" src="./js/main.js?v={{BUILD}}"></script>
+<script src="./js/patch.chip.util.js?v=3"></script>
+<script src="./js/patch.saved.highlight.js?v=3"></script>
+<script src="./js/patch.exclude.enhancer.js?v=3"></script>
+<script src="./js/patch.anti.v3.js?v=3"></script>
+<script src="./js/patch.results.range.badge.js?v=3"></script>
+<script type="module">
+  try {
+    const mod = await import('./js/main.js?v={{BUILD}}');
+    const pick = (m, k) => m?.[k] ?? m?.default?.[k];
+    if (!window.doRecommend)   window.doRecommend   = pick(mod, 'doRecommend')   ?? (()=>console.warn('[bridge] doRecommend missing'));
+    if (!window.excludedModal) window.excludedModal = pick(mod, 'excludedModal') ?? (()=>console.warn('[bridge] excludedModal missing'));
+  } catch (e) {
+    console.warn('[bridge] import main.js failed:', e);
+  }
+</script>
 </body>
 </html>
-
