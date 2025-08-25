@@ -1,4 +1,4 @@
-
+﻿
 // scripts/build-anti.mjs
 import fs from 'fs/promises';
 function genANTI(draws){
@@ -20,3 +20,4 @@ async function run(){
   const draws=JSON.parse(raw); const anti=genANTI(draws); await fs.writeFile('data/anti.hex.json', JSON.stringify(anti,null,2)); console.log('ANTI generated');
 }
 run();
+

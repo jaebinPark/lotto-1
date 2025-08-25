@@ -1,8 +1,8 @@
-
+﻿
 // scripts/build-draws.mjs
 import fs from 'fs/promises';
 import fetch from 'node-fetch';
-import cheerio from 'cheerio';
+import { load } from 'cheerio';
 const baseJson = 'https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=';
 const byWin = 'https://www.dhlottery.co.kr/gameResult.do?method=byWin&drwNo=';
 async function getLatestNo(){
@@ -20,7 +20,7 @@ function toDraw(js){
 async function parseRankPage(no){
   try{
     const html=await fetch(byWin+no).then(r=>r.text());
-    const $=cheerio.load(html);
+    const $=load(html);
     const rows=$('table.tbl_data tbody tr');
     const getRow=(i)=>{const t=$(rows[i]).find('td'); const ppl=Number($(t[2]).text().replace(/[^\d]/g,'')); const amt=Number($(t[3]).text().replace(/[^\d]/g,'')); return {people:ppl||0, amount:amt||0};};
     return {first:getRow(0), second:getRow(1), third:getRow(2)};
@@ -39,3 +39,4 @@ async function run(){
   console.log('Saved', all.length, 'draws');
 }
 run();
+
